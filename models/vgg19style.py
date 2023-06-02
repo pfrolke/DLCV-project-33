@@ -34,7 +34,15 @@ class VGG19Style2(nn.Module):
         # select 16 convolutional and 5 pooling layers
 
         self.vgg19 = vgg19(weights=VGG19_Weights.DEFAULT)
-        self.classif = nn.Sequential(nn.Linear(1000, 32), nn.Sigmoid())
+
+        # swap maxpool layers for avgpool
+        for i, layer in enumerate(self.vgg19.features):
+            if isinstance(layer, nn.MaxPool2d):
+                self.vgg19.features[i] = nn.AvgPool2d(
+                    kernel_size=2, stride=2, padding=0, ceil_mode=False
+                )
+
+        self.classif = nn.Sequential(nn.Linear(1000, num_attributes), nn.Sigmoid())
 
         for param in self.vgg19.parameters():
             param.requires_grad = False
