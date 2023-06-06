@@ -45,15 +45,6 @@ from utils import mask_utils
 from utils.object_detection import visualization_utils
 from hyperparameters import params_dict
 
-# import sys
-
-# modules = [sys.modules[m.__module__] for m in object.__subclasses__() if m.__module__ in sys.modules]
-# files = [m.__file__ for m in modules if hasattr(m, '__file__')]
-
-# print(*[f for f in files if f.startswith('/Users/paulf/studie')], sep='\n')
-
-# 1/0
-
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
@@ -74,13 +65,13 @@ flags.DEFINE_string(
     'The format of the label map file. Currently only support `csv` where the '
     'format of each row is: `id:name`.')
 flags.DEFINE_string(
-    'image_file_pattern', '',
+    'image_file_pattern', '../../eval/input/*.jpg',
     'The glob that specifies the image file pattern.')
 flags.DEFINE_string(
-    'output_html', 'tmp/test.html',
+    'output_html', '../../eval/output/res.html',
     'The output HTML file that includes images with rendered detections.')
 flags.DEFINE_string(
-    'output_file', 'tmp/res.npy',
+    'output_file', '../../eval/output/res.npy',
     'The output npy file that includes model output.')
 flags.DEFINE_integer(
     'max_boxes_to_draw', 10, 'The maximum number of boxes to draw.')
@@ -238,12 +229,6 @@ def main(unused_argv):
     f.write(html_str)
   np.save(FLAGS.output_file, res)
 
-
 if __name__ == '__main__':
-  flags.mark_flag_as_required('model')
-  flags.mark_flag_as_required('checkpoint_path')
-  flags.mark_flag_as_required('label_map_file')
-  flags.mark_flag_as_required('image_file_pattern')
-  flags.mark_flag_as_required('output_html')
   logging.set_verbosity(logging.INFO)
   tf.app.run(main)
