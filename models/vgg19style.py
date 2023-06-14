@@ -3,51 +3,22 @@ from torchvision.models import vgg19, VGG19_Weights
 
 
 class VGG19Style(nn.Module):
-    def __init__(self, num_attributes):
+    def __init__(self):
         super().__init__()
 
         # select 16 convolutional and 5 pooling layers
 
-        layers = vgg19(weights=VGG19_Weights.DEFAULT).features
+        self.layers = vgg19(weights=VGG19_Weights.DEFAULT).features
 
-        for i, layer in enumerate(layers):
+        # swap maxpool layers for avgpool
+        for i, layer in enumerate(self.layers):
             if isinstance(layer, nn.MaxPool2d):
-                layers[i] = nn.AvgPool2d(
+                self.layers[i] = nn.AvgPool2d(
                     kernel_size=2, stride=2, padding=0, ceil_mode=False
                 )
-
-        layers.append(nn.Linear(layers[-1]))
-
-        self.layers = nn.Sequential(layers)
 
         for param in self.parameters():
             param.requires_grad = False
 
-    def forward(self, x):
+    def forward(self, x, ):
         return self.layers(x)
-
-
-class VGG19Style2(nn.Module):
-    def __init__(self, num_attributes):
-        super().__init__()
-
-        # select 16 convolutional and 5 pooling layers
-
-        self.vgg19 = vgg19(weights=VGG19_Weights.DEFAULT)
-
-        # swap maxpool layers for avgpool
-        for i, layer in enumerate(self.vgg19.features):
-            if isinstance(layer, nn.MaxPool2d):
-                self.vgg19.features[i] = nn.AvgPool2d(
-                    kernel_size=2, stride=2, padding=0, ceil_mode=False
-                )
-
-        self.classif = nn.Sequential(nn.Linear(1000, num_attributes), nn.Sigmoid())
-
-        for param in self.vgg19.parameters():
-            param.requires_grad = False
-
-    def forward(self, x):
-        x = self.vgg19(x)
-        x = self.classif(x)
-        return x
