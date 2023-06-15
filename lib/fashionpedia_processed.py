@@ -35,5 +35,5 @@ class FashionPediaProcessed(Dataset):
     def __getitem__(self, index):
         return self.data[index]
     
-    def invImg(self, item):
-        return self.inv_normal(item['img']).permute(1, 2, 0)
+    def invImg(self, img):
+        return self.inv_normal(img).permute(1, 2, 0)
