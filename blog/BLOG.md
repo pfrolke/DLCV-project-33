@@ -24,7 +24,7 @@ Furthermore, researchers have explored applying style transfer methods to transf
 
 In this project we followed the CNN-based approach [[1]](#1). We chose to explore this method because it requires much less computational resources than the Auto-Encoder or GAN methods.
 
-With the rise of generative diffusion models like Stable diffusion [[9]](#9), we also explored the possibility of using diffusion models for style transfer. Diffusion based models are known to be able to generate high quality through diffusion steps, that to slowly add random noise to data. They then learn to reverse the diffusion process to construct desired data samples from the noise. A diffusion based model called CoAdapter, which can be used to perform style transfer, was recently released [[10]](#10). Recent research has already tried to use diffusion based fashion style transfers [[11]](#11), but none have used the CoAdapter model. In this blog we also see if we can apply diffusion based style transfers on the segmented clothing pieces from the Fashionpedia dataset using CoAdapter. Since these diffusion based models are very computationally expensive, we only explore this model through manual experimentation using a Gradio interface
+With the rise of generative diffusion models like Stable diffusion [[9]](#9), we also explored the possibility of using diffusion models for style transfer. Diffusion based models are known to be able to generate high quality through diffusion steps, that to slowly add random noise to data. They then learn to reverse the diffusion process to construct desired data samples from the noise. A diffusion based model called CoAdapter, which can be used to perform style transfer, was recently released [[10]](#10). Recent research has already tried to use diffusion based fashion style transfers [[11]](#11), but none have used the CoAdapter model. In this blog we also see if we can apply diffusion based style transfers on the segmented clothing pieces from the Fashionpedia dataset using CoAdapter. Since these diffusion based models are very computationally expensive, we only explore this model through manual experimentation using a Gradio interface[[12]](#12).
 
 ## The Fashionpedia Dataset
 
@@ -67,8 +67,8 @@ It's important to note that this score does not give the whole picture. The Fash
 
 ### Content & Style Extraction
 
-We first experimented with extracting just the content or the style of an image from the dataset, to gain an understanding of how the fashion images work with this method. 
- 
+We first experimented with extracting just the content or the style of an image from the dataset, to gain an understanding of how the fashion images work with this method.
+
 ![style and content extraction](/blog/imgs/loss.png)
 *Figure 2. Extracting style and content to an RGB noise image input (top-left). The generated style representation (top-middle). The generated content representation (top-right). The style-reference (bottom-middle). The content reference (bottom-right).*
 
@@ -85,18 +85,28 @@ Figure 3 shows the results of the style transfer method for different settings o
 
 |      | 5000       | 10000  | 15000  | 20000  |
 |------|------------|--------|--------|--------|
-| 1e-2 | **0.3393** | 0.4704 | 0.4701 | 0.47   |
+| 1e-2 | **0.3393** | 0.4704 | 0.4701 | 0.4700 |
 | 1e-3 | 0.4697     | 0.4727 | 0.4754 | 0.4754 |
 | 1e-4 | 0.4727     | 0.4719 | 0.4754 | 0.4754 |
 
 *Table 1. PPe scores for different settings.*
 
 ### Fashion Style Transfer Results
-For a 
 
+To see the results of the model we perform nine style transfers using three different style images and three different content images. The style images each have one of the attributes: floral, camouflage and geometric, the results of the style transfers can be found in figure 4. The model visually shows promising results. Some artifacts are created which are not present in the original style and content images. These artifacts are especially visible on the geometric style transfer and also for the camouflage style transfer on the t-shirt content image.
 
 ![style transfer results](/blog/imgs/transfers.png)
-*Figure 4. Style transfer results using three different style images and three different content images.*
+*Figure 4. Style transfer results using three different style images and three different content images. The style images each have one of the attributes: floral, camouflage and geometric.*
+
+We also perform a PPe scoring on the generated images. This scoring can be found in table 2. While the cardigan and t-shirt both have similar error for all three style transfers is the blazer a lot lower. This is most likely a result of this specific blazer. Future research needs to be done to see the effect of how these style transfers on different blazers as well as other clothing pieces to see if this inherent to the model or to this specific choice of images.
+
+|            | cardigan | t-shirt | blazer |
+|------------|----------|---------|--------|
+| floral     | 0.4628   | 0.3857  | 0.0027 |
+| camouflage | 0.4615   | 0.3890  | 0.0042 |
+| geometric  | 0.4657   | 0.3791  | 0.0102 |
+
+*Table 2. PPe scores for different style transfers using CNN based method.*
 
 ### Multiple References Style Transfer
 
@@ -110,10 +120,33 @@ However, this method seems to generate worse results (figure 5). The styles from
 
 ## CoAdapter Style Transfer Results
 
+### Manual Experiments
+
+Through some manual tweaking and testing did we find that the best selection of hyperparamers were to set the amount of steps to its max (100), the guidance scale to 2 and the adapter duration to 0.6. This combination of hyperparameters resulted in a style transfer that was able to transfer the style of the style image to the content image while allowing for some creative freedom. The positive prompt is set to attribute that best describes the visual aspect of the style image and vice versa is this done for the negative prompt and the content image. The positive prompts were: floral, camouflage and geometric. The negative prompts were: plain(pattern), plain(pattern) and check. For reproducibility is the seed set to 42. The results of this style transfer can be found in figure 6.
+
+![CoAdapter style transfer results](/blog/imgs/diffusion/composition.png)
+
+*Figure 6. Style transfer results using CoAdapter.*
+
+As can be seen from these results are the styles changed from the original content images. Although it can be said that these styles do not resemble the style of the style image. Most likely did the diffusion model rely more heavily on the prompts than on the style images as can especially be seen from the geometric style transfers. A better selection of hyperparameters and prompts warrants further research.
+
+### Diffusion Style Transfer PPe scores
+
+|            | cardigan   | t-shirt | blazer |
+|------------|------------|---------|--------|
+| floral     | 0.6400     | 0.3689  | 0.1037 |
+| camouflage | 0.6632     | 0.4012  | 0.0946 |
+| geometric  | 0.6394     | 0.3713  | 0.1141 |
+
+*Table 3. PPe scores for different style transfers using CoAdapter based method.*
+
+In Table 3 can the PPe scores be seen for the CoAdapter style transfer. From these results we can again see that the blazer has a much lower error than the cardigan and t-shirt. The cardigan has the poorest results of all three style transfers. Furthermore, the camouflage style transfer has the highest error for the cardigan and the t-shirt. This shows that this specific has trouble with camouflage style transfers.
+
 ## Conclusion
 
-Future works could explore the use of the ResNet, since this is a more modern CNN architecture. Additionally, the use of CoAdapter model could be explored because it was only used thus far in a manual way.
+To conclude, we have explored the use of CNN-based style transfer and diffusion-based style transfer for fashion style transfer. We have found that the CNN-based style transfer method is able to transfer the style of a style image to a content image, while keeping the structural content of the content image intact. However, the CNN-based style transfer method is not able to transfer the style of multiple style images to a content image. The diffusion-based style transfer method is able to transfer the style of a style image to a content image but relies more on the prompts than on the style image. For both methods, further investigation needs to be done to see how the results differ over the whole dataset.
 
+Future works could explore the use of the ResNet, since this is a more modern CNN architecture. Additionally, the use of CoAdapter model could be explored because it was only used thus far in a manual way.
 
 ## References
 
@@ -139,22 +172,4 @@ Future works could explore the use of the ResNet, since this is a more modern CN
 
 <a id='11'>[11]</a>Cao, S., Chai, W., Hao, S., Zhang, Y., Chen, H., & Wang, G. (2023). Difffashion: Reference-based fashion design with structure-aware transfer by diffusion models. arXiv preprint arXiv:2302.06826.
 
-
-DATASET: <https://fashionpedia.github.io/home/index.html>
-DATASET RESEARCH: <https://arxiv.org/pdf/2004.12276v2.pdf>
-
-AUTOENCODER STYLE TRANSFER RESEARCH: <https://openaccess.thecvf.com/content_cvpr_2017/papers/Chen_StyleBank_An_Explicit_CVPR_2017_paper.pdf>
-AUTOENCODER STYLE TRANSFER BLOG: <https://medium.com/analytics-vidhya/lets-discuss-encoders-and-style-transfer-c0494aca6090>
-AUTOENCODE FASHION STYLE TRANSFER RESEARCH: <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9903255&tag=1>
-
-GAN STYLE TRANSFER: <https://arxiv.org/pdf/1406.2661.pdf>
-PERSON TO PERSON GAN FASHION STYLE TRANSFER: <https://ieeexplore.ieee.org/abstract/document/8636265>
-IMAGE ANALOGY PROBING GAN FASHION STYLE: <https://arxiv.org/pdf/1709.04695.pdf>
-FASHIONGAN BLOG: <https://towardsdatascience.com/deepstyle-part-2-4ca2ae822ba0>
-
-CNN STYLE TRANSFER RESEARCH: <https://arxiv.org/pdf/1508.06576.pdf>
-CNN FASHION STYLE TRANSFER BLOG: <https://towardsdatascience.com/a-brief-introduction-to-neural-style-transfer-d05d0403901d>
-CNN FASHION STYLE TRANSFER RESEARCH: <https://www.hindawi.com/journals/cin/2020/8894309/>
-VGG RESEARCH: <https://arxiv.org/pdf/1409.1556.pdf>
-
-COADAPTER STABBLE DIFFUSION STYLE TRANSFER: <https://github.com/TencentARC/T2I-Adapter/blob/main/README.md>
+<a id='12'>[12]</a>Adapter/CoAdapter<https://huggingface.co/spaces/Adapter/CoAdapter>
