@@ -65,7 +65,7 @@ flags.DEFINE_string(
     'The format of the label map file. Currently only support `csv` where the '
     'format of each row is: `id:name`.')
 flags.DEFINE_string(
-    'image_file_pattern', '../../eval/input/*.jpg',
+    'image_file_pattern', '../../eval/input/*',
     'The glob that specifies the image file pattern.')
 flags.DEFINE_string(
     'output_html', '../../eval/output/res.html',

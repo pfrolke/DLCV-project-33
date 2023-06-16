@@ -1,4 +1,4 @@
-# PRAD_AI: Automatic Fashion Style Transfer Using CNN
+# PRAD-AI: Automatic Fashion Style Transfer Using CNN
 
 ## Group 33 - Students
 
@@ -24,25 +24,69 @@ Furthermore, researchers have explored applying style transfer methods to transf
 In this project we followed the CNN-based approach [[1]](#1). We chose to explore this method because it requires much less computational resources than the Auto-Encoder or GAN methods.
 
 ## The Fashionpedia Dataset
-A recent fashion dataset in combination with a fashion garment segmentation and classifier models was released called Fashionpedia [[7]](#7). The dataset consists out of around 45.000 images of people wearing clothing. Each image has detailed annotations for each garment, which contain a class label out of 27 categories and fine-grained features of the garment from a list of 294 attributes.
+A dataset of fashion images, called Fashionpedia [7], was recently released in combination with fashion garment segmentation and classifier models. The dataset consists out of around 45.000 images of people wearing clothing. Each image has detailed annotations for each garment, which contain a class label out of 27 categories and fine-grained features of the garment from a list of 294 attributes.
 
-From this dataset, we selected garments that where classified to a class belonging to the `upperbody`-superclass. Additionally, we required each clothing piece in our selection to have a minimum area of `25%` of the image size to filter out small detail pieces.
+From this dataset, we selected garments that where classified to a class belonging to the `upperbody`-superclass. Additionally, we required each clothing piece in our selection to have a minimum area of `25%` of the image size to filter out small detail pieces. From this selection, we use the segmented clothing images after scaling to `240x240` and normalizing.
 
 ## CNN-Based Style Transfer
-The pre-trained Convolutional Neural Network (CNN), VGG-19 [[8]](#8), can be used to manipulate a content image to adopt the style of a style reference image, by following [[1]](#1). The authors find that the representations of image content and image style within a CNN are separable. By reconstructing input images from the activations at different layers in the CNN, they show how deeper layers capture the high-level content of an image, while shallower layers capture a style representation. Specifically, layer `conv_4_2` is used for the content representation, and layers `conv_1_1`, `conv_2_1`, `conv_3_1`, `conv_4_1`, and `conv_5_1` are used for the style representation.
+A pre-trained Convolutional Neural Network (CNN), in this case VGG-19 [[8]](#8), can be used to manipulate a content image to adopt the style of a style reference image by following [[1]](#1). The authors find that the representations of image content and image style within a CNN are separable. By reconstructing input images from the activations at different layers in the CNN, they show how deeper layers capture the high-level content of an image, while shallower layers capture a style representation. Specifically, layer `conv_4_2` is used for the content representation, and layers `conv_1_1`, `conv_2_1`, `conv_3_1`, `conv_4_1`, and `conv_5_1` are used for the style representation.
 
-To transfer style from a style image to a content image, we perform a forward pass on the pre-trained CNN with the content and the style images and save the layer activations. Next, we perform a forward pass on the input image, which starts off as a copy of the content image. Then, we calculate the loss and iteratively perform gradient descent on the input image.
+To transfer style from a style image to a content image, we do a forward pass of the pre-trained CNN with the content and the style images and save the layer activations. Next, we do a forward pass on the input image, which starts off as a copy of the content image. Then, we calculate the loss and iteratively perform gradient descent on the input image.
 
-The loss function is a weighted combination of a content loss and a style loss:
+The loss function is a weighted combination of a content loss function and a style loss function:
 $$\ell_{total}(p,a,x)=\alpha \ell_{content}+\beta \ell_{style}$$
 The content loss is given by the squared difference between the activations at the chosen content representation layer of the content image ($P_{ij}^l$) and the input image ($F_{ij}^l$):
 $$\ell_{content}(p,x)=\frac{1}{2}\sum_{i,j}(F_{ij}^l - P_{ij}^l)^2$$
 The style loss is given by the mean-squared distance between the Gram matrices of the activations at the style representation layers of the style image ($A_{ij}^l$) and the input image ($G_{ij}^l$):
-$$\ell_{content}(a,x)=\frac{1}{|L|}\sum_{l\in L}\frac{1}{4N_l^2M_l^2}\sum_{i,j}(F_{ij}^l - P_{ij}^l)^2$$
+$$\ell_{style}(a,x)=\frac{1}{|L|}\sum_{l\in L}\frac{1}{4N_l^2M_l^2}\sum_{i,j}(A_{ij}^l - G_{ij}^l)^2$$
 
-## Results
+## Content & Style Extraction
+We first experimented with extracting just the content or the style of an image from the dataset, to gain an understanding of how the fashion images work with this method. 
+ 
+![style and content extraction](/blog/imgs/loss.png)
+*Figure 2. Extracting style and content to an RGB noise image input (top-left). The generated style representation (top-middle). The generated content representation (top-right). The style-reference (bottom-middle). The content reference (bottom-right).*
+
+We manipulate an RGB noise image input using just the style loss or the content loss for 50000 iterations of gradient descent (Adam optimizer; lr=$10^{-3}$). The results in figure 2 show how the style loss is able to add the blue checkered patterns in the image, without introducing the structural content of the reference clothing. Contrastingly, the content loss is able to introduce the structure of the content image, while keeping the noise pattern intact throughout the image.
+
+Figure 2 also highlights an issue with using the segmented pieces for style transfer. The generated style representation shows big bright spots in the image, which are likely caused by the white background of the style reference image also being treated as "style". An idea to crop the style images to reduce the amount of visible background was explored, however this reduced the quality of the reduced the quality of the generated images due to the lower resolution of the crop. Therefore, we use the uncropped style image in our following experiments.
+
+## Quantitative Evaluation by FashionPedia Classifier
+In order to measure the quantitative performance of the style transfer method, we apply the pre-trained FashionPedia classifier to the generated images. The classification accuracy on the generated image of the class matching the content image provides an insight into how much the generated clothing piece's structural content has changed. Similarly, the classification accuracy of the goal attribute of the style image on the generated image provides an insight into how much the generated clothing piece's style has changed.
+
+Ideally, when classifying the generated image the accuracy of the clothing category ($C$) would match that of the content image, and accuracy of the style attribute ($A$) would match that of the style image. Therefore, we report a PRADAPoints error (PPe) as the mean square error of these accuracies:
+
+$$ PPe=\frac{1}{2}(C_{style} - C_{generated})^2+\frac{1}{2}(A_{style} - A_{generated})^2 $$
+
+It's important to note that this score does not give the whole picture. The FashionPedia classifier is trained on pictures only, so the artifacts that come from the style transfer can completely throw it off even though it would be acceptable for a human.
+
+## Tuning the Settings
+![style and content extraction](/blog/imgs/params.png)
+*Figure 3. Style transfer results for multiple settings of the ratio $\alpha/\beta$ vs. the number of iterations. Same content and style image as in fig 2.*
+
+Figure 3 shows the results of the style transfer method for different settings of the ratio $\alpha/\beta$, which is used in the loss function, and the number of iterations the algorithm is ran for. The PPe scores are shown in the table below. Contrary to the scores, we used $\alpha/\beta=10^{-3}$ and 10000 iterations for further experiments, since we found this had a good balance in showing the style while keeping the structural content intact.
+
+|      | 5000       | 10000  | 15000  | 20000  |
+|------|------------|--------|--------|--------|
+| 1e-2 | **0.3393** | 0.4704 | 0.4701 | 0.47   |
+| 1e-3 | 0.4697     | 0.4727 | 0.4754 | 0.4754 |
+| 1e-4 | 0.4727     | 0.4719 | 0.4754 | 0.4754 |
+
+*Table 1. PPe scores for different settings.*
+
+## Fashion Style Transfer Results
+![style transfer results](/blog/imgs/transfers.png)
+
+## Multiple References Style Transfer
+Additionally, we carried out experiments by incorporating multiple style images in each iteration. The idea behind this approach was to utilize several style images with a common attribute, aiming to uncover the underlying generalized representation of that style and transfer it to the input image.
+
+![multiple style transfer results](/blog/imgs/multi.png)
+
+*Figure 5. Style transfer with 10 style reference images. 3000 iterations.*
+
+However, this method seems to generate worse results (figure 5). The styles from each style reference image seem to get transferred onto the target image in a fragmented way. And since these style images are still highly diverse, this results in a combined style that is unnatural.
 
 ## Conclusion
+
 
 ## References
 
