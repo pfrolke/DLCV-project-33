@@ -24,14 +24,16 @@ Furthermore, researchers have explored applying style transfer methods to transf
 
 In this project we followed the CNN-based approach [[1]](#1). We chose to explore this method because it requires much less computational resources than the Auto-Encoder or GAN methods.
 
-With the rise of generative diffusion models like Stable diffusion [[9]](#9), we also explored the possibility of using diffusion models for style transfer. Diffusion based models are known to be able to generate high quality through diffusion steps, that to slowly add random noise to data. They then learn to reverse the diffusion process to construct desired data samples from the noise. A diffusion based model called CoAdapter, which can be used to perform style transfer, was recently released [[10]](#10). In this blog we also see if we can apply diffusion based style transfers on the segmented clothing pieces from the Fashionpedia dataset using CoAdapter. Since these diffusion based models are very computationally expensive, we only explore this model through manual experimentation using a Gradio interface
+With the rise of generative diffusion models like Stable diffusion [[9]](#9), we also explored the possibility of using diffusion models for style transfer. Diffusion based models are known to be able to generate high quality through diffusion steps, that to slowly add random noise to data. They then learn to reverse the diffusion process to construct desired data samples from the noise. A diffusion based model called CoAdapter, which can be used to perform style transfer, was recently released [[10]](#10). Recent research has already tried to use diffusion based fashion style transfers [[11]](#11), but none have used the CoAdapter model. In this blog we also see if we can apply diffusion based style transfers on the segmented clothing pieces from the Fashionpedia dataset using CoAdapter. Since these diffusion based models are very computationally expensive, we only explore this model through manual experimentation using a Gradio interface
 
 ## The Fashionpedia Dataset
+
 A dataset of fashion images, called Fashionpedia [7], was recently released in combination with fashion garment segmentation and classifier models. The dataset consists out of around 45.000 images of people wearing clothing. Each image has detailed annotations for each garment, which contain a class label out of 27 categories and fine-grained features of the garment from a list of 294 attributes.
 
 From this dataset, we selected garments that where classified to a class belonging to the `upperbody`-superclass. Additionally, we required each clothing piece in our selection to have a minimum area of `25%` of the image size to filter out small detail pieces. From this selection, we use the segmented clothing images after scaling to `240x240` and normalizing.
 
 ## CNN-Based Style Transfer
+
 A pre-trained Convolutional Neural Network (CNN), in this case VGG-19 [[8]](#8), can be used to manipulate a content image to adopt the style of a style reference image by following [[1]](#1). The authors find that the representations of image content and image style within a CNN are separable. By reconstructing input images from the activations at different layers in the CNN, they show how deeper layers capture the high-level content of an image, while shallower layers capture a style representation. Specifically, layer `conv_4_2` is used for the content representation, and layers `conv_1_1`, `conv_2_1`, `conv_3_1`, `conv_4_1`, and `conv_5_1` are used for the style representation.
 
 To transfer style from a style image to a content image, we do a forward pass of the pre-trained CNN with the content and the style images and save the layer activations. Next, we do a forward pass on the input image, which starts off as a copy of the content image. Then, we calculate the loss and iteratively perform gradient descent on the input image.
@@ -51,7 +53,20 @@ Additionally to the five input images, the CoAdapter model also allows for an in
 
 Lastly, three hyperparameters can be set for the CoAdapter model. The first hyperparameter is the number of diffusion steps. The second hyperparameter is the guidance scale, where a lower guidance scale allows to model to generate more diverse and creative outputs. A lower guidance makes the model condition more faithfully to the provided guidance or reference information. The last hyperparameter is used to control the timing and duration of the adapter's influence. The longer the apter is applied the more the model receives  guidance and conditioning information resulting in a more faithful output. During our experiments we will play around with these hyperparameters to see how they affect the results.
 
-## Content & Style Extraction
+## Quantitative Evaluation by FashionPedia Classifier
+
+In order to measure the quantitative performance of the style transfer method, we apply the pre-trained FashionPedia classifier to the generated images. The classification accuracy on the generated image of the class matching the content image provides an insight into how much the generated clothing piece's structural content has changed. Similarly, the classification accuracy of the goal attribute of the style image on the generated image provides an insight into how much the generated clothing piece's style has changed.
+
+Ideally, when classifying the generated image the accuracy of the clothing category ($C$) would match that of the content image, and accuracy of the style attribute ($A$) would match that of the style image. Therefore, we report a PRADAPoints error (PPe) as the mean square error of these accuracies:
+
+$$ PPe=\frac{1}{2}(C_{style} - C_{generated})^2+\frac{1}{2}(A_{style} - A_{generated})^2 $$
+
+It's important to note that this score does not give the whole picture. The FashionPedia classifier is trained on pictures only, so the artifacts that come from the style transfer can completely throw it off even though it would be acceptable for a human.
+
+## CNN Style Transfer Results
+
+### Content & Style Extraction
+
 We first experimented with extracting just the content or the style of an image from the dataset, to gain an understanding of how the fashion images work with this method. 
  
 ![style and content extraction](/blog/imgs/loss.png)
@@ -61,16 +76,8 @@ We manipulate an RGB noise image input using just the style loss or the content 
 
 Figure 2 also highlights an issue with using the segmented pieces for style transfer. The generated style representation shows big bright spots in the image, which are likely caused by the white background of the style reference image also being treated as "style". An idea to crop the style images to reduce the amount of visible background was explored, however this reduced the quality of the reduced the quality of the generated images due to the lower resolution of the crop. Therefore, we use the uncropped style image in our following experiments.
 
-## Quantitative Evaluation by FashionPedia Classifier
-In order to measure the quantitative performance of the style transfer method, we apply the pre-trained FashionPedia classifier to the generated images. The classification accuracy on the generated image of the class matching the content image provides an insight into how much the generated clothing piece's structural content has changed. Similarly, the classification accuracy of the goal attribute of the style image on the generated image provides an insight into how much the generated clothing piece's style has changed.
+### Tuning the Settings
 
-Ideally, when classifying the generated image the accuracy of the clothing category ($C$) would match that of the content image, and accuracy of the style attribute ($A$) would match that of the style image. Therefore, we report a PRADAPoints error (PPe) as the mean square error of these accuracies:
-
-$$ PPe=\frac{1}{2}(C_{style} - C_{generated})^2+\frac{1}{2}(A_{style} - A_{generated})^2 $$
-
-It's important to note that this score does not give the whole picture. The FashionPedia classifier is trained on pictures only, so the artifacts that come from the style transfer can completely throw it off even though it would be acceptable for a human.
-
-## Tuning the Settings
 ![style and content extraction](/blog/imgs/params.png)
 *Figure 3. Style transfer results for multiple settings of the ratio $\alpha/\beta$ vs. the number of iterations. Same content and style image as in fig 2.*
 
@@ -84,10 +91,15 @@ Figure 3 shows the results of the style transfer method for different settings o
 
 *Table 1. PPe scores for different settings.*
 
-## Fashion Style Transfer Results
-![style transfer results](/blog/imgs/transfers.png)
+### Fashion Style Transfer Results
+For a 
 
-## Multiple References Style Transfer
+
+![style transfer results](/blog/imgs/transfers.png)
+*Figure 4. Style transfer results using three different style images and three different content images.*
+
+### Multiple References Style Transfer
+
 Additionally, we carried out experiments by incorporating multiple style images in each iteration. The idea behind this approach was to utilize several style images with a common attribute, aiming to uncover the underlying generalized representation of that style and transfer it to the input image.
 
 ![multiple style transfer results](/blog/imgs/multi.png)
@@ -96,13 +108,11 @@ Additionally, we carried out experiments by incorporating multiple style images 
 
 However, this method seems to generate worse results (figure 5). The styles from each style reference image seem to get transferred onto the target image in a fragmented way. And since these style images are still highly diverse, this results in a combined style that is unnatural.
 
-
-### CNN-Based Results
-
-### CoAdapter Results
-
+## CoAdapter Style Transfer Results
 
 ## Conclusion
+
+Future works could explore the use of the ResNet, since this is a more modern CNN architecture. Additionally, the use of CoAdapter model could be explored because it was only used thus far in a manual way.
 
 
 ## References
@@ -126,6 +136,8 @@ However, this method seems to generate worse results (figure 5). The styles from
 <a id="9">[9]</a>Rombach, R ., Blattmann, A., Lorenz, D., Esser, P., Ommer, B. (2021). High-Resolution Image Synthesis with Latent Diffusion Models. . arXiv preprint arXiv:2112.10752.
 
 <a id="10">[10]</a>TencentARC, T2I-Adapter, (2023), GitHub repository, <https://github.com/TencentARC/T2I-Adapter>
+
+<a id='11'>[11]</a>Cao, S., Chai, W., Hao, S., Zhang, Y., Chen, H., & Wang, G. (2023). Difffashion: Reference-based fashion design with structure-aware transfer by diffusion models. arXiv preprint arXiv:2302.06826.
 
 
 DATASET: <https://fashionpedia.github.io/home/index.html>
