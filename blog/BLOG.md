@@ -172,4 +172,4 @@ Future works could explore the use of the ResNet, since this is a more modern CN
 
 <a id='11'>[11]</a>Cao, S., Chai, W., Hao, S., Zhang, Y., Chen, H., & Wang, G. (2023). Difffashion: Reference-based fashion design with structure-aware transfer by diffusion models. arXiv preprint arXiv:2302.06826.
 
-<a id='12'>[12]</a>Adapter/CoAdapter<https://huggingface.co/spaces/Adapter/CoAdapter>
+<a id='12'>[12]</a>Adapter/CoAdapter, <https://huggingface.co/spaces/Adapter/CoAdapter>
